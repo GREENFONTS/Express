@@ -1,5 +1,5 @@
 const express = require("express")
-const { PrismaClient } = require("@prisma/client")
+const { PrismaClient } = require("../prisma/client")
 const prisma = new PrismaClient();
 const router = express.Router();
 const flash = require("connect-flash");
