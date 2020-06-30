@@ -346,7 +346,7 @@ router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
     },
   });
 
-  res.render("Profile", {
+  res.render("profile", {
     data: Posts,
     Profile: Profile,
     Author: Name,
