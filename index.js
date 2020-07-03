@@ -6,7 +6,7 @@ const flash = require('connect-flash');
 const session = require("express-session");
 const { ensureAuthenticated } = require('./config/auth');
 const fileUpload = require("express-fileupload");
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require('./prisma/client')
 const prisma = new PrismaClient();
 const passport = require('passport')
 const path = require('path');
@@ -49,7 +49,7 @@ app.use("/user", require("./routes/users"));
 
 app.use(express.static("public"));
 
-const PORT = process.env.PORT||3000;
+const PORT = process.env.PORT||4000;
 
 app.listen(PORT, () => {
   console.log(`Server connected at port ${PORT}`);

@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output = "./client"
+  output   = "./client"
 }
 
 datasource postgresql {
@@ -11,20 +11,20 @@ datasource postgresql {
 model comment {
   comment String?
   email   String?
-  id      String  @id @default(cuid())
+  id      String  @id  @default(cuid())
   postid  String?
-  users   users?  @relation(fields: [email], references: [Email])
+  users   users?  @relation(fields: [email], references: [email])
   @@index([email], name: "Email")
 }
 
 model likes {
   email  String?
-  postid String 
-  id     String   @id @default(cuid())
-  post   posts @relation(fields:[postid], references:[id])
-  users      users?    @relation(fields: [email], references: [Email])
+  id     String  @id @default(cuid())
+  postid String
+  post   posts     @relation(fields:[postid], references:[id])
+  users  users?    @relation(fields: [email], references: [email])
 }
- 
+
 model posts {
   author     String?
   avatar     String?
@@ -34,10 +34,10 @@ model posts {
   id         String    @id @default(cuid())
   postlike   Int?
   title      String?
-  users      users?    @relation(fields: [email], references: [Email])
+   users      users?    @relation(fields: [email], references: [email])
   Likes      likes[]
 
-  @@index([email], name: "Email")
+  @@index([email], name: "email")
 }
 
 model profile {
@@ -54,18 +54,18 @@ model todo {
   email   String?
   id      String  @id @default(cuid())
   task    String?
-  users   users?  @relation(fields: [email], references: [Email])
-   @@index([email], name: "Email")
+  users   users?  @relation(fields: [email], references: [email])
+  @@index([email], name: "email")
 }
 
 model users {
-  Avatar    String?
-  Email     String    @id
-  Name      String?
-  followedBy  users[]   @relation("UserFollows", references: [Email])
-  following   users[]   @relation("UserFollows", references: [Email])
-  Password  String?
-  Password2 String?
+  avatar    String?
+  email     String  @id
+  name      String?
+  password  String?
+  password2 String?
+  followedBy  users[]   @relation("UserFollows", references: [email])
+  following   users[]   @relation("UserFollows", references: [email])
   comment   comment[]
   posts      posts[]
   todo       todo[]

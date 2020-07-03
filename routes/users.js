@@ -17,7 +17,7 @@ const today = moment()
 //dashboard
 router.get("/dashboard", ensureAuthenticated, (req, res) => {
   res.render("welcome", {
-    Name: req.user.Name,
+    Name: req.user.name,
   });
 });
 
@@ -41,7 +41,7 @@ async function main(req, res, user) {
   const todos = await prisma.todo
     .findMany({
       where: {
-        email: req.user.Email
+        email: req.user.email
       }
     });
   
@@ -72,7 +72,7 @@ async function Todo(req, res, user) {
       content: Content,
       users:{
         connect:{
-          Email:  req.user.Email
+          email:  req.user.email
         }
       }
     }
@@ -134,7 +134,7 @@ async function Bloget(req, res, user) {
          },
        
      where: {
-       Email: req.user.Email,
+       email: req.user.email,
      },
      })
   
@@ -145,7 +145,7 @@ async function Bloget(req, res, user) {
  
       const Post = await prisma.posts.findMany({
         where: {
-          email: req.user.Email
+          email: req.user.email
         }
       })
       
@@ -155,7 +155,7 @@ async function Bloget(req, res, user) {
   Posts.forEach((element) => {
     element.forEach((item) => {
       item.created_at = moment(item.created_at).fromNow();
-      if (req.user.Name == item.Author) {
+      if (req.user.name == item.author) {
         current_user = true;
       }
     });
@@ -169,7 +169,7 @@ async function Bloget(req, res, user) {
   })
     
   res.render("posts", {
-    Name: req.user.Name,
+    Name: req.user.name,
     data: Poots
   });  
  
@@ -196,11 +196,11 @@ async function Blogpost(req, res, user) {
     data: {
       title: Title,
       content: Content,
-      avatar: req.user.Avatar,
-      author: req.user.Name,
+      avatar: req.user.avatar,
+      author: req.user.name,
       users:{
         connect:{
-          Email: req.user.Email
+          email: req.user.email
 
         }
       }
@@ -228,14 +228,14 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
       following: true,
     },
     where: {
-      Email: req.user.Email,
+      email: req.user.email,
     },
   });
 
   const Posts = await prisma.posts
     .findMany({
       where: {
-        email: req.user.Email,
+        email: req.user.email,
       }
     });
 
@@ -245,15 +245,15 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
   
   const Profile = await prisma.profile.findMany({
     where: {
-      email: req.user.Email,
+      email: req.user.email,
     },
   });
 
   res.render("userProfile", {
     data: Posts,
     Profile: Profile,
-    Author: req.user.Name,
-    Avatar: req.user.Avatar,
+    Author: req.user.name,
+    Avatar: req.user.avatar,
     Followers: req.user.followedBy.length,
     Following: req.user.following.length
   });
@@ -322,13 +322,13 @@ router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
       following: true,
     },
     where: {
-      Email: req.session.Email,
+      email: req.session.Email,
     },
   });
   let Avatar, Name;
   User.forEach(item => {
-    Avatar = item.Avatar
-    Name = item.Name
+    Avatar = item.avatar
+    Name = item.name
   })
   const Posts = await prisma.posts.findMany({
     where: {
@@ -361,7 +361,7 @@ router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
 async function FollowAuthor(req, res) {
   const users = await prisma.users.findMany({
     where: {
-       Email: req.session.Email
+       email: req.session.Email
      }
   })
  
@@ -381,20 +381,20 @@ async function FollowAuthor(req, res) {
   });
    const user = await prisma.users.update({
     where: {
-      Email: req.session.Email
+      email: req.session.Email
     },
     data: {
       followedBy: {
         connect: [{
-          Email: `${req.user.Email}`
+          email: `${req.user.email}`
         }]
       }
     }
    })
   let Avatar, Name;
   users.forEach((item) => {
-    Avatar = item.Avatar;
-    Name = item.Name;
+    Avatar = item.avatar;
+    Name = item.name;
   });
 
   res.render("profile", {
@@ -424,7 +424,7 @@ async function UnFollowAuthor(req, res) {
 
   const users = await prisma.users.findMany({
     where: {
-      Email: req.session.Email,
+      email: req.session.Email,
     },
   });
   const Profile = await prisma.profile.findMany({
@@ -442,13 +442,13 @@ async function UnFollowAuthor(req, res) {
   });
   const user = await prisma.users.update({
     where: {
-      Email: req.session.Email,
+      email: req.session.Email,
     },
     data: {
       followedBy: {
         disconnect: [
           {
-            Email: `${req.user.Email}`,
+            email: `${req.user.email}`,
           },
         ],
       },
@@ -457,16 +457,16 @@ async function UnFollowAuthor(req, res) {
 
   let Avatar, Name;
   users.forEach((item) => {
-    Avatar = item.Avatar;
-    Name = item.Name;
+    Avatar = item.avatar;
+    Name = item.name;
   });
 
   res.render("profile", {
     data: Posts,
     Profile: Profile,
     FollowChange: "Follow",
-    Author: req.user.Name,
-    Avatar: req.user.Avatar,
+    Author: req.user.name,
+    Avatar: req.user.avatar,
     Followers: req.user.followedBy.length,
     Following: req.user.following.length,
   });
@@ -490,7 +490,7 @@ async function Like(req, res) {
           postid: req.params.id
         },
         {
-          email: req.user.Email
+          email: req.user.email
         }
       ]
 
@@ -527,7 +527,7 @@ async function Like(req, res) {
             postid: req.params.id,
           },
           {
-            email: req.user.Email,
+            email: req.user.email,
           },
         ]
       }
@@ -538,7 +538,7 @@ async function Like(req, res) {
       data: {
         users: {
           connect: {
-            Email: req.user.Email,
+            email: req.user.email,
           },
         },
         post: {
@@ -587,7 +587,7 @@ async function Comment(req, res) {
     data: {
       users: {
         connect: {
-          Email: req.user.Email,
+          email: req.user.email,
         },
       },
       postid: req.params.id,

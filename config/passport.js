@@ -1,44 +1,46 @@
 const LocalStrategy = require('passport-local').Strategy;
-const { PrismaClient } = require("@prisma/client");
+const { PrismaClient } = require("../prisma/client");
 const prisma = new PrismaClient();
-//which username and password should i use 
-// in the login page create a new user in register and den try logging in
 
-//ok if u have create tell me lemme check my datatbase
 module.exports = function (passport) {
     passport.use(
-        new LocalStrategy({usernameField: 'email'}, (email, password, done) => {
-            prisma.users.findOne({ where: { Email: email } })//or is the mistake from here
+        new LocalStrategy({usernameField: 'email'}, (Email, password, done) => {
+            prisma.users.findMany({ where: { email: Email } })
                 .catch(err => console.log(err))
                 .then(user => {
-                    
-                    if (!user) {
+                    let userPassword;
+                    user.forEach(elem => {
+                        userPassword = elem.password
+                    })
+                    if (user.length == 0) {
                         return done(null, false, {
                           message: "This email is not registered",
                         });
-                        console.log("not user")
+                        
                     }
-
-                    if (password != user.Password) {
+                    if (password != userPassword) {
                         return done(null, false, {message: "Incorrect Password" })
-                        console.log("incorrect password")
+                           
                     }
                     else {
                         return done(null, user)
-                        console.log("passed")
+                        
                     }
                 })
         })
     )
     passport.serializeUser((user, done) => {
-       
-        done(null, user.Email)
+        let userEmail;
+        user.forEach((elem) => {
+          userEmail = elem.email;
+        });
+        done(null, userEmail)
     })
     passport.deserializeUser(async (Email, done) => {
         try {
             let person = await prisma.users.findOne({
               where: {
-                Email: Email,
+                email:Email,
               },
                 include: {
                     followedBy: {
@@ -54,7 +56,6 @@ module.exports = function (passport) {
                     
                 }
             });
-    
             done(null,person)
         } catch (error) {
             done(error)

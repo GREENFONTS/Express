@@ -1,5 +1,5 @@
 const express = require("express")
-const { PrismaClient } = require("../prisma/client")
+const { PrismaClient } = require("../prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
 const flash = require("connect-flash");
@@ -38,11 +38,11 @@ router.post("/Register", upload.single('avatar'), (req, res) => {
   async function User(res, req) {
   await prisma.users.create({
     data: {
-      Name: name,
-      Email: email,
-      Password: password,
-      Password2: password2,
-      Avatar: sampleFile
+      name: name,
+      email: email,
+      password: password,
+      password2: password2,
+      avatar: sampleFile
     },
   });
 }
@@ -63,14 +63,15 @@ router.post("/Register", upload.single('avatar'), (req, res) => {
     password2})
   }
   else {
-    prisma.users.findOne({
+    prisma.users.findMany({
       where: {
-        Email: email
+        email: email
       }
     }
      )
       .then(user => {
-        if (user) {
+        console.log(user, req.body)
+        if (user.length != 0) {
           error.push({ msg: 'Email has already been registered' })
           res.render("register", {
             error,
@@ -108,9 +109,14 @@ router.post("/Login", (req, res, next) => {
         res.render("login", {
           error,
         });
-        error = []
+        error = [] 
       }
-      if (!user || password != user.Password) {
+      let userPassword;
+      user.forEach((elem) => {
+        userPassword = elem.password;
+      });
+
+      if (!user || password != userPassword) {
         error.push({ msg: "Incorrect Email or password" });
         res.render("login", {
           error
@@ -158,7 +164,7 @@ async function BlogHome(req, res, user) {
   
   Posts.forEach((element) => {
     element.created_at = moment(element.created_at).fromNow();
-
+    console.log(element.avatar)
   });
   Posts.sort(element => element.Created_at)
   res.render('HomeBlog', {
