@@ -2,17 +2,11 @@ const express = require("express")
 const { PrismaClient } = require("../prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
-const flash = require("connect-flash");
-const session = require("express-session")
 const passport = require("passport");
-const { ensureAuthenticated } = require("../config/auth");
 const faker = require('faker')
 let multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
 const moment = require("moment");
-
-const today = moment();
-
 
 let storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -33,9 +27,10 @@ router.get("/Register", (req, res) => {
 let error = []
 //try and check it 
 router.post("/Register", upload.single('avatar'), (req, res) => {
+  console.log(error, req.body)
   let sampleFile = `${req.file.filename}`
   const { name, email, password, password2 } = req.body;
-  async function User(res, req) {
+  async function User() {
   await prisma.users.create({
     data: {
       name: name,

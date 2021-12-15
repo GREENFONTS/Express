@@ -2,18 +2,12 @@ const express = require("express");
 const { PrismaClient } = require("../prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
-const flash = require("connect-flash");
-const session = require("express-session");
-const passport = require("passport");
 const { ensureAuthenticated } = require('../config/auth');
-const async = require("express-async-await");
 const moment = require("moment");
-const { en } = require("faker/lib/locales");
-const { json } = require("body-parser");
+const { getTodo, createTodo, deleteTodo, getBlog, createBlog, createProfile, FollowAuthor} = require('../functions')
 
-const today = moment()
-
-
+let error = [];
+let FollowChange = "";
 //dashboard
 router.get("/dashboard", ensureAuthenticated, (req, res) => {
   res.render("welcome", {
@@ -22,8 +16,7 @@ router.get("/dashboard", ensureAuthenticated, (req, res) => {
 });
 
 //quotes
-router.get("/quotes", ensureAuthenticated, (req, res, next) => {  
-
+router.get("/quotes", ensureAuthenticated, (req, res) => {  
   res.render("quotes");
   }
 )
@@ -36,26 +29,10 @@ router.get("/Logout", (req, res) => {
   res.redirect("/Login");
 });
 
-//prisma get fxn
-async function main(req, res, user) {
-  const todos = await prisma.todo
-    .findMany({
-      where: {
-        email: req.user.email
-      }
-    });
-  
-  res.render("Todo", {
-    Title: "Todo List",
-    data: todos
-  });   
-  
-};
 
-let error = []
-// prisma get
-router.get("/TodoList", ensureAuthenticated,  (req, res) => {
-  main(req, res)
+// todolist display
+router.get("/TodoList", ensureAuthenticated, (req, res) => {
+  getTodo(req, res)
     .catch(e => {
       throw e
     })
@@ -64,26 +41,9 @@ router.get("/TodoList", ensureAuthenticated,  (req, res) => {
     })
 });
 
-async function Todo(req, res, user) {
-  const { Task, Content } = req.body;
-  await prisma.todo.create({
-    data: {
-      task: Task,
-      content: Content,
-      users:{
-        connect:{
-          email:  req.user.email
-        }
-      }
-    }
-  });
- res.redirect('/user/TodoList') 
-}
-
-router.post("/TodoList", (req, res,next) => {  
- 
-  
-  Todo(req, res)
+//create a todo
+router.post("/TodoList", (req, res) => {  
+   createTodo(req, res)
     .catch((e) => {
       throw e;
     })
@@ -91,24 +51,10 @@ router.post("/TodoList", (req, res,next) => {
       await prisma.disconnect();
     })
 });
-
-
-
-//delete fxn
-async function Delete(req, res, profile) { 
-  await prisma.todo.delete({
-    where: {
-     
-      id: req.params.id,
-    }
-  });
-   
-  res.redirect("/user/TodoList");
-}
 
 //prisma delete
-router.get("/del/:id",  (req, res, profile) => {
-   Delete(req, res, profile)
+router.get("/del/:id",  (req, res) => {
+   deleteTodo(req, res)
     .catch((e) => {
       throw e;
     })
@@ -117,67 +63,9 @@ router.get("/del/:id",  (req, res, profile) => {
     });
 });
 
-//Blog get fxn
-async function Bloget(req, res, user) {
-     const users = await prisma.users.findMany({
-       include: {
-         followedBy: {
-           include: {
-             posts: true
-           }
-         },
-         following: {
-           include: {
-             posts: true
-           }
-         }
-         },
-       
-     where: {
-       email: req.user.email,
-     },
-     })
-  
-  let Posts = [];
-   req.user.following.forEach(element => {
-     Posts.push(element.posts)
-  })
- 
-      const Post = await prisma.posts.findMany({
-        where: {
-          email: req.user.email
-        }
-      })
-      
-      Posts.push(Post)
 
-  let Poots = []
-  Posts.forEach((element) => {
-    element.forEach((item) => {
-      item.created_at = moment(item.created_at).fromNow();
-      if (req.user.name == item.author) {
-        current_user = true;
-      }
-    });
-    })
-    
-  Posts.forEach(element => {
-    element.forEach(item => {
-       Poots.push(item);
-    })
-   
-  })
-    
-  res.render("posts", {
-    Name: req.user.name,
-    data: Poots
-  });  
- 
-  
-  
-};
 router.get('/Blog', ensureAuthenticated, (req, res, next) => {
- Bloget(req, res)
+ getBlog(req, res)
    .catch((e) => {
      throw e;
    })
@@ -185,34 +73,9 @@ router.get('/Blog', ensureAuthenticated, (req, res, next) => {
      await prisma.disconnect();
    });
 })
-  
 
-
-//prisma blog post
-
-async function Blogpost(req, res, user) {
-  const { Title, Content } = req.body;
-  await prisma.posts.create({
-    data: {
-      title: Title,
-      content: Content,
-      avatar: req.user.avatar,
-      author: req.user.name,
-      users:{
-        connect:{
-          email: req.user.email
-
-        }
-      }
-    }
-  });
- res.redirect('/user/Blog') 
-}
-
-router.post("/Blog", (req, res,next) => {  
- 
-  
-  Blogpost(req, res)
+router.post("/Blog", (req, res) => {   
+  createBlog(req, res)
     .catch((e) => {
       throw e;
     })
@@ -222,7 +85,7 @@ router.post("/Blog", (req, res,next) => {
 });
 
 router.get('/userProfile', ensureAuthenticated, async (req, res) => {
-  const user = await prisma.users.findMany({
+  const user = await prisma.users.findFirst({
     include: {
       followedBy: true,
       following: true,
@@ -232,8 +95,7 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
     },
   });
 
-  const Posts = await prisma.posts
-    .findMany({
+  const Posts = await prisma.posts.findFirst({
       where: {
         email: req.user.email,
       }
@@ -243,7 +105,7 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
     item.created_at = moment(item.created_at).fromNow();
   })
   
-  const Profile = await prisma.profile.findMany({
+  const Profile = await prisma.profile.findFirst({
     where: {
       email: req.user.email,
     },
@@ -260,52 +122,13 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
   
 }); 
 
-router.get('/Editprofile', ensureAuthenticated, async(req, res, profile) => {
+router.get('/Editprofile', ensureAuthenticated, async(req, res) => {
   res.render('EditProfile')
 })
 
-async function Profile(req, res, profile) {
-  const { Name, Email, Occupation, Hobbies, Skills, About } = req.body;
-  await prisma.profile.findOne({
-    where: {
-      email: Email
-    }
-  })
-    .then (async profile => {
-      if (profile) {
-        error.push({ msg: 'UserName has been registered' })
-        res.render("EditProfile", {
-            error,
-            Name,
-            Email,
-            Hobbies,
-          Occupation,
-          Skills,
-            About
-          });
-        error = [];
-        }
-      else {
-        await prisma.profile.create({
-          data: {
-            name: Name,
-            email: Email,
-            occupation: Occupation,
-            hobbies: Hobbies,
-            skills: Skills,
-            about: About
-     },
-   });
-   res.redirect("/user/Blog");
-    }
-  })
-   
-}
 
- 
-router.post('/EditProfile', (req, res, next) => {
- 
-  Profile(req, res)
+router.post('/EditProfile', (req, res) => { 
+  createProfile(req, res)
     .catch((e) => {
       throw e;
     })
@@ -313,10 +136,9 @@ router.post('/EditProfile', (req, res, next) => {
       await prisma.disconnect();
     });
 })
-let FollowChange = "";
 
 router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
-  const User = await prisma.users.findMany({
+  const User = await prisma.users.findFirst({
     include: {
       followedBy: true,
       following: true,
@@ -340,7 +162,7 @@ router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
     item.created_at = moment(item.created_at).fromNow();
   });
 
-  const Profile = await prisma.profile.findMany({
+  const Profile = await prisma.profile.findFirst({
     where: {
       email: req.session.Email,
     },
@@ -357,59 +179,8 @@ router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
   });
 }); 
 
-
-async function FollowAuthor(req, res) {
-  const users = await prisma.users.findMany({
-    where: {
-       email: req.session.Email
-     }
-  })
- 
-  const Profile = await prisma.profile.findMany({
-    where: {
-      email: req.session.Email
-    }
-  })
-  const Posts = await prisma.posts.findMany({
-    where: {
-      email: req.session.Email
-      
-    }
-  })
-  Posts.forEach((item) => {
-    item.created_at = moment(item.created_at).fromNow();
-  });
-   const user = await prisma.users.update({
-    where: {
-      email: req.session.Email
-    },
-    data: {
-      followedBy: {
-        connect: [{
-          email: `${req.user.email}`
-        }]
-      }
-    }
-   })
-  let Avatar, Name;
-  users.forEach((item) => {
-    Avatar = item.avatar;
-    Name = item.name;
-  });
-
-  res.render("profile", {
-    data: Posts,
-    Profile: Profile,
-    FollowChange: "UnFollow",
-    Author: Name,
-    Avatar: Avatar,
-  });
-
-}
-
-
-router.get('/Follow/:Author', ensureAuthenticated, (req, res, user) => {
-  FollowAuthor(req, res)
+router.get('/Follow/:Author', ensureAuthenticated, (req, res) => {
+  FollowAuthor(req, res, "Follow", "UnFollow")
     .catch((e) => {
       throw e;
     })
@@ -419,61 +190,8 @@ router.get('/Follow/:Author', ensureAuthenticated, (req, res, user) => {
 
 })
 
-
-async function UnFollowAuthor(req, res) {
-
-  const users = await prisma.users.findMany({
-    where: {
-      email: req.session.Email,
-    },
-  });
-  const Profile = await prisma.profile.findMany({
-    where: {
-      email: req.session.Email,
-    },
-  });
-  const Posts = await prisma.posts.findMany({
-    where: {
-      email: req.session.Email,
-    },
-  });
-  Posts.forEach((item) => {
-    item.created_at = moment(item.created_at).fromNow();
-  });
-  const user = await prisma.users.update({
-    where: {
-      email: req.session.Email,
-    },
-    data: {
-      followedBy: {
-        disconnect: [
-          {
-            email: `${req.user.email}`,
-          },
-        ],
-      },
-    },
-  });
-
-  let Avatar, Name;
-  users.forEach((item) => {
-    Avatar = item.avatar;
-    Name = item.name;
-  });
-
-  res.render("profile", {
-    data: Posts,
-    Profile: Profile,
-    FollowChange: "Follow",
-    Author: req.user.name,
-    Avatar: req.user.avatar,
-    Followers: req.user.followedBy.length,
-    Following: req.user.following.length,
-  });
-}
-
-router.get('/Unfollow/:Email', ensureAuthenticated, (req, res, user) => {
-  UnFollowAuthor(req, res)
+router.get('/Unfollow/:Email', ensureAuthenticated, (req, res) => {
+  Author(req, res, "UnFollow", "Follow")
     .catch((e) => {
       throw e;
     })

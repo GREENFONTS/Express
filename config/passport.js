@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 module.exports = function (passport) {
     passport.use(
         new LocalStrategy({usernameField: 'email'}, (Email, password, done) => {
-            prisma.users.findMany({ where: { email: Email } })
+            prisma.users.findFirst({ where: { email: Email } })
                 .catch(err => console.log(err))
                 .then(user => {
                     let userPassword;
@@ -38,7 +38,7 @@ module.exports = function (passport) {
     })
     passport.deserializeUser(async (Email, done) => {
         try {
-            let person = await prisma.users.findOne({
+            let person = await prisma.users.findFirst({
               where: {
                 email:Email,
               },
