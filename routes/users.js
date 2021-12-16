@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 const router = express.Router();
 const { ensureAuthenticated } = require('../config/auth');
 const moment = require("moment");
-const { getTodo, createTodo, deleteTodo, getBlog, createBlog, createProfile, FollowAuthor} = require('../functions')
+const { getTodo, createTodo, deleteTodo, getBlog, createBlog, createProfile, Author, Like} = require('../functions')
 
 let error = [];
 let FollowChange = "";
@@ -200,97 +200,8 @@ router.get('/Unfollow/:Email', ensureAuthenticated, (req, res) => {
     });
 })
 
-async function Like(req, res) {
-  const User = await prisma.likes.findMany({
-    where: {
-      AND: [
-        {
-          postid: req.params.id
-        },
-        {
-          email: req.user.email
-        }
-      ]
 
-    }
-    
-  })
-  if (User.length != 0) {
-  const curentPost = await prisma.posts.findMany({
-      where: {
-        id: req.params.id,
-      },
-    });
-    let CurrentLike;
-    curentPost.forEach((element) => {
-      CurrentLike = element.postlike - 1;
-      if (CurrentLike == 0) {
-        CurrentLike = null;
-      }
-    });
-    
-    await prisma.posts.updateMany({
-      where: {
-          id: req.params.id,
-        },
-      data: {
-            postlike: CurrentLike,
-          },
-    });
-
-    await prisma.likes.deleteMany({
-      where: {
-        AND: [
-          {
-            postid: req.params.id,
-          },
-          {
-            email: req.user.email,
-          },
-        ]
-      }
-    });
-    
-  } else {
-    await prisma.likes.create({
-      data: {
-        users: {
-          connect: {
-            email: req.user.email,
-          },
-        },
-        post: {
-          connect: {
-            id: req.params.id,
-          },
-        },
-      },
-    });
-
-    const curentPost = await prisma.posts.findMany({
-      where: {
-        id: req.params.id,
-      },
-    });
-    let CurrentLike;
-    curentPost.forEach((element) => {
-      CurrentLike = element.postlike + 1;
-    });
-
-    await prisma.posts.updateMany({
-      where: {
-          id: req.params.id,
-        },
-          data: {
-            postlike: CurrentLike,
-          },
-  
-    });    
-  }
-  res.redirect("/user/Blog");
-}
-
-router.get('/Like/:id/', ensureAuthenticated, async (req, res, user) => {
+router.get('/Like/:id/', ensureAuthenticated, async (req, res) => {
   Like(req, res)
     .catch((e) => {
       throw e;
@@ -300,23 +211,7 @@ router.get('/Like/:id/', ensureAuthenticated, async (req, res, user) => {
     });
 })
 
-async function Comment(req, res) {
-  await prisma.comment.create({
-    data: {
-      users: {
-        connect: {
-          email: req.user.email,
-        },
-      },
-      postid: req.params.id,
-      comment: req.body.Comment,
-    },
-  });
-
-  res.redirect("/user/Blog");
-}
-
-router.post("/comment/:id/", ensureAuthenticated, async (req, res, user) => {
+router.post("/comment/:id/", ensureAuthenticated, async (req, res) => {
   Comment(req, res)
     .catch((e) => {
       throw e;

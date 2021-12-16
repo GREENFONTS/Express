@@ -3,21 +3,10 @@ const { PrismaClient } = require("../prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
 const passport = require("passport");
-const faker = require('faker')
-let multer = require("multer");
+const upload = require("../config/multer");
 const { v4: uuidv4 } = require("uuid");
 const moment = require("moment");
-
-let storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "./public");
-  },
-  filename: function (req, file, cb) {
-    cb(null, uuidv4() + '-' + file.originalname);
-  },
-});
-
-let upload = multer({ storage: storage });
+const {User, BlogHome} = require('../functions')
 
 router.get("/Register", (req, res) => {
   req.session.is_Follow = false;
@@ -27,71 +16,13 @@ router.get("/Register", (req, res) => {
 let error = []
 //try and check it 
 router.post("/Register", upload.single('avatar'), (req, res) => {
-  console.log(error, req.body)
-  let sampleFile = `${req.file.filename}`
-  const { name, email, password, password2 } = req.body;
-  async function User() {
-  await prisma.users.create({
-    data: {
-      name: name,
-      email: email,
-      password: password,
-      password2: password2,
-      avatar: sampleFile
-    },
-  });
-}
-  if (password != password2) {
-    error.push({ msg: 'Passwords do not match' })
-  }
-
-  if (password.length < 8) {
-    error.push({ msg: 'Password must be at least 8 characters' })
-
-  }
-  if (error.length > 0) {
-    res.render('register',{
-      error, 
-      name,
-      email,
-      password,
-    password2})
-  }
-  else {
-    prisma.users.findMany({
-      where: {
-        email: email
-      }
-    }
-     )
-      .then(user => {
-        console.log(user, req.body)
-        if (user.length != 0) {
-          error.push({ msg: 'Email has already been registered' })
-          res.render("register", {
-            error,
-            name,
-            email,
-            password,
-            password2,
-          });
-           error = [];
-        }
-        else {
-              User(res, req)
-                .catch((e) => {
-                  throw e;
-                })
-                .finally(async () => {
-                  await prisma.disconnect();
-                }); 
-          
-          res.redirect("/Login");
-        }
-        
-        
+  User(req, res)
+    .catch((e) => {
+      throw e;
     })
-  }
+    .finally(async () => {
+      await prisma.disconnect();
+    });   
 })
 
 router.post("/Login", (req, res, next) => {
@@ -154,21 +85,6 @@ router.get("/Contact", (req, res, next) => {
 });
 
 
-async function BlogHome(req, res, user) {
-  const Posts = await prisma.posts.findMany(); 
-  
-  Posts.forEach((element) => {
-    element.created_at = moment(element.created_at).fromNow();
-    console.log(element.avatar)
-  });
-  Posts.sort(element => element.Created_at)
-  res.render('HomeBlog', {
-    data: Posts
-  })  
-  req.session.is_Follow = false;
-
-};
-
 router.get("/Blog", (req, res, next) => {
   BlogHome(req, res)
     .catch((e) => {
@@ -185,7 +101,5 @@ router.get(`/Follow/:Email`, (req, res, err) => {
   req.session.Email = req.params.Email;
   res.render('login') 
 })
-
-
 
 module.exports = router
