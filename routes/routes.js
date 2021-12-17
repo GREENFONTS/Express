@@ -1,49 +1,52 @@
 const express = require("express")
-const { PrismaClient } = require("../prisma/client");
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
-const passport = require("passport");
 const upload = require("../config/multer");
-const { v4: uuidv4 } = require("uuid");
-const moment = require("moment");
-const {User, BlogHome} = require('../functions')
+const { User, BlogHome } = require('../functions');
+const jwt = require("jsonwebtoken");
 
 router.get("/Register", (req, res) => {
   req.session.is_Follow = false;
   res.render("register");
 });
 
-let error = []
 //try and check it 
 router.post("/Register", upload.single('avatar'), (req, res) => {
-  User(req, res)
-    .catch((e) => {
-      throw e;
-    })
-    .finally(async () => {
-      await prisma.disconnect();
-    });   
+  const { name, email, password, password2 } = req.body;
+  try {
+    User(req, res, name, email, password, password2)
+      .catch((err) => {
+        throw err;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      });
+  }
+  catch (err) {
+    console.log(err)
+  }
 })
 
-router.post("/Login", (req, res, next) => {
+router.post("/Login", async (req, res) => {
+  let error = []
   const { email, password } = req.body;
   
-  passport.authenticate('local',
-    (err, user, info) => {
-      if (err) {
-        error.push({ msg: "You are not Registered" });
+  let user = await prisma.users.findFirst({
+    where: {
+      email: email
+    }
+  });
+  
+      if (user == null | undefined) {
+        error.push({ msg: "Email is not registered" });
         res.render("login", {
           error,
         });
         error = [] 
       }
-      let userPassword;
-      user.forEach((elem) => {
-        userPassword = elem.password;
-      });
-
-      if (!user || password != userPassword) {
-        error.push({ msg: "Incorrect Email or password" });
+      if (password != user.password) {
+        error.push({ msg: "Incorrect password" });
         res.render("login", {
           error
         });
@@ -51,52 +54,50 @@ router.post("/Login", (req, res, next) => {
        
       }
       else {
-        req.logIn(user, function (err) {
-          if (err) {
-            return next(err);
+        const token = jwt.sign(
+          { user_id: user.id, email },
+          process.env.TOKEN_KEY,
+          {
+            expiresIn: "2h",
           }
-          if (req.session.is_Follow) {
-            return res.redirect(`/user/Profile`)
-            
-          } else {
-            return res.redirect("/user/dashboard");
-          }
-          
-      
-        })
+        );
+        let session = req.session;
+        session.token = token;
+        session.user = user;
+        res.redirect("/user/dashboard");
       }
-    })
-    (req, res, next)
+
 });
 
-router.get("/Login", (req, res, next) => {
+router.get("/Login", (req, res) => {
+  let error = []
   res.render("login");
 })
 
-router.get("/", (req, res, next) => {
+router.get("/", (req, res) => {
   req.session.is_Follow = false;
   res.render("Home");
 });
 
 
-router.get("/Contact", (req, res, next) => {
+router.get("/Contact", (req, res) => {
   req.session.is_Follow = false;
   res.render("Contact");
 });
 
 
-router.get("/Blog", (req, res, next) => {
+router.get("/Blog", (req, res) => {
   BlogHome(req, res)
     .catch((e) => {
       throw e;
     })
     .finally(async () => {
-      await prisma.disconnect();
+      await prisma.$disconnect();
     });
 });
 
 
-router.get(`/Follow/:Email`, (req, res, err) => {
+router.get(`/Follow/:Email`, (req, res) => {
   req.session.is_Follow = true
   req.session.Email = req.params.Email;
   res.render('login') 

@@ -4,16 +4,12 @@ const exhbs = require("express-handlebars");
 const bodyParser = require("body-parser");
 const flash = require('connect-flash');
 const session = require("express-session");
-const passport = require('passport')
 const path = require('path');
 
 
 app.engine("handlebars", exhbs());
 app.set('views', path.join(__dirname, 'views'))
 app.set("view engine", "handlebars");
-
-//passport config
-require('./config/passport')(passport)
 
 // when you are using a fetch api or just ajax you need to add the line below for it to work
 app.use(bodyParser.json());
@@ -30,11 +26,6 @@ app.use(
     cookie: { maxAge: 600000 },
   })
 );
-
- //Passprt Middleware
-app.use(passport.initialize());
-app.use(passport.session())
-
 //connect flash
 app.use(flash());
 

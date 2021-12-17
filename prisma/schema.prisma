@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "./client"
 }
 
 datasource postgresql {
@@ -51,11 +50,10 @@ model profile {
 
 model todo {
   content String?
-  email   String?
+  email   String? @unique
   id      String  @id @default(cuid())
   task    String?
   users   users?  @relation(fields: [email], references: [email])
-  @@index([email], name: "email")
 }
 
 model users {
@@ -63,7 +61,6 @@ model users {
   email     String  @id
   name      String?
   password  String?
-  password2 String?
   followedBy  users[]   @relation("UserFollows", references: [email])
   following   users[]   @relation("UserFollows", references: [email])
   comment   comment[]

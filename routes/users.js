@@ -1,34 +1,37 @@
 const express = require("express");
-const { PrismaClient } = require("../prisma/client");
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
 const { ensureAuthenticated } = require('../config/auth');
 const moment = require("moment");
 const { getTodo, createTodo, deleteTodo, getBlog, createBlog, createProfile, Author, Like} = require('../functions')
 
-let error = [];
-let FollowChange = "";
-//dashboard
-router.get("/dashboard", ensureAuthenticated, (req, res) => {
+//dashboard page
+router.get("/dashboard", ensureAuthenticated, async(req, res) => {
+  let profile = await prisma.profile.findFirst({
+    where: {
+      email: req.session.user.email
+    }
+  });
+  if (profile != null | undefined) {
+    
+  }
   res.render("welcome", {
-    Name: req.user.name,
+    user: req.session.user,
   });
 });
 
-//quotes
-router.get("/quotes", ensureAuthenticated, (req, res) => {  
+//quotes page
+router.get("/quotes", ensureAuthenticated, (req, res) => {
   res.render("quotes");
-  }
-)
+});
 
 //Logout
 router.get("/Logout", (req, res) => {
   req.logOut();
   req.session.is_Follow = false
-  req.flash("success_msg", "Logout successful");
   res.redirect("/Login");
 });
-
 
 // todolist display
 router.get("/TodoList", ensureAuthenticated, (req, res) => {
@@ -42,7 +45,7 @@ router.get("/TodoList", ensureAuthenticated, (req, res) => {
 });
 
 //create a todo
-router.post("/TodoList", (req, res) => {  
+router.post("/TodoList", ensureAuthenticated, (req, res) => {  
    createTodo(req, res)
     .catch((e) => {
       throw e;
@@ -52,8 +55,8 @@ router.post("/TodoList", (req, res) => {
     })
 });
 
-//prisma delete
-router.get("/del/:id",  (req, res) => {
+//delete a todo
+router.get("/del/:id", ensureAuthenticated,  (req, res) => {
    deleteTodo(req, res)
     .catch((e) => {
       throw e;
@@ -63,8 +66,8 @@ router.get("/del/:id",  (req, res) => {
     });
 });
 
-
-router.get('/Blog', ensureAuthenticated, (req, res, next) => {
+//user blog session
+router.get('/Blog', ensureAuthenticated, (req, res) => {
  getBlog(req, res)
    .catch((e) => {
      throw e;
@@ -74,7 +77,8 @@ router.get('/Blog', ensureAuthenticated, (req, res, next) => {
    });
 })
 
-router.post("/Blog", (req, res) => {   
+//create a blog post
+router.post("/Blog", ensureAuthenticated, (req, res) => {   
   createBlog(req, res)
     .catch((e) => {
       throw e;
@@ -84,6 +88,7 @@ router.post("/Blog", (req, res) => {
     })
 });
 
+//userProfile page
 router.get('/userProfile', ensureAuthenticated, async (req, res) => {
   const user = await prisma.users.findFirst({
     include: {
@@ -122,22 +127,25 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
   
 }); 
 
-router.get('/Editprofile', ensureAuthenticated, async(req, res) => {
-  res.render('EditProfile')
+//create user profile
+router.post('/EditProfile', ensureAuthenticated, (req, res) => {
+  const { Name, Email, Occupation, Hobbies, Skills, About } = req.body;
+  try {
+    createProfile(req, res, Name, Email, Occupation, Hobbies, Skills, About)
+      .catch((e) => {
+        throw e;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      });
+  }
+  catch (err) {
+    console.log(err)
+  }
 })
 
-
-router.post('/EditProfile', (req, res) => { 
-  createProfile(req, res)
-    .catch((e) => {
-      throw e;
-    })
-    .finally(async () => {
-      await prisma.disconnect();
-    });
-})
-
-router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
+//get profile
+router.get('/Profile', ensureAuthenticated, async (req, res) => {
   const User = await prisma.users.findFirst({
     include: {
       followedBy: true,
@@ -179,6 +187,7 @@ router.get(`/Profile`, ensureAuthenticated, async (req, res) => {
   });
 }); 
 
+//follow and author
 router.get('/Follow/:Author', ensureAuthenticated, (req, res) => {
   FollowAuthor(req, res, "Follow", "UnFollow")
     .catch((e) => {
@@ -190,6 +199,7 @@ router.get('/Follow/:Author', ensureAuthenticated, (req, res) => {
 
 })
 
+//unfollow and author
 router.get('/Unfollow/:Email', ensureAuthenticated, (req, res) => {
   Author(req, res, "UnFollow", "Follow")
     .catch((e) => {
@@ -200,7 +210,7 @@ router.get('/Unfollow/:Email', ensureAuthenticated, (req, res) => {
     });
 })
 
-
+//like a post
 router.get('/Like/:id/', ensureAuthenticated, async (req, res) => {
   Like(req, res)
     .catch((e) => {
@@ -211,6 +221,7 @@ router.get('/Like/:id/', ensureAuthenticated, async (req, res) => {
     });
 })
 
+//comment on a post
 router.post("/comment/:id/", ensureAuthenticated, async (req, res) => {
   Comment(req, res)
     .catch((e) => {
@@ -221,4 +232,4 @@ router.post("/comment/:id/", ensureAuthenticated, async (req, res) => {
     });
 });
 
-module.exports = router
+module.exports = router;

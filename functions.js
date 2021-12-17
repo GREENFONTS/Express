@@ -1,3 +1,8 @@
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+const cloudinary = require("./config/cloudinary");
+const upload = require("./config/multer");
+
 module.exports = {
   getTodo: async (req, res) => {
     const todos = await prisma.todo.findFirst({
@@ -106,9 +111,8 @@ module.exports = {
     res.redirect("/user/Blog");
   },
 
-  createProfile: async (req, res) => {
+  createProfile: async (req, res, Name, Email, Occupation, Hobbies, Skills, About) => {
     let error = [];
-    const { Name, Email, Occupation, Hobbies, Skills, About } = req.body;
     let profile = await prisma.profile.findFirst({
       where: {
         email: Email,
@@ -311,10 +315,9 @@ module.exports = {
     res.redirect("/user/Blog");
   },
 
-  User: async (req, res) => {
-    let sampleFile = await cloudinary.uploader.upload(req.file.path)
-
-    const { name, email, password, password2 } = req.body;
+  User: async (req, res, name, email, password, password2) => {
+    let error = []
+    let sampleFile = await cloudinary.uploader.upload(req.file.path);    
 
     if (password != password2) {
       error.push({ msg: "Passwords do not match" });
@@ -349,18 +352,18 @@ module.exports = {
       });
       error = [];
     } else {
-      await prisma.users.create({
-        data: {
-          name: name,
-          email: email,
-          password: password,
-          password2: password2,
-          avatar: sampleFile.secure_url()
-        },
-      });
-
+        await prisma.users.create({
+          data: {
+            name: name,
+            email: email,
+            password: password,
+            avatar: sampleFile.secure_url
+          },
+        });
+      console.log('reached')
       res.redirect("/Login");
-    }
+      }
+
   },
 
   BlogHome: async (req, res) => {
