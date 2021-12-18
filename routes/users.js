@@ -4,21 +4,16 @@ const prisma = new PrismaClient();
 const router = express.Router();
 const { ensureAuthenticated } = require('../config/auth');
 const moment = require("moment");
-const { getTodo, createTodo, deleteTodo, getBlog, createBlog, createProfile, Author, Like} = require('../functions')
+const { getTodo, createTodo, deleteTodo, getBlog, createBlog, createProfile, Author, Like, Dashboard, UpdateProfile, Comment} = require('../functions')
 
 //dashboard page
-router.get("/dashboard", ensureAuthenticated, async(req, res) => {
-  let profile = await prisma.profile.findFirst({
-    where: {
-      email: req.session.user.email
-    }
-  });
-  if (profile != null | undefined) {
-    
+router.get("/dashboard", ensureAuthenticated, (req, res) => {
+  try {
+    Dashboard(req, res)
   }
-  res.render("welcome", {
-    user: req.session.user,
-  });
+  catch (err) {
+    throw err
+  }
 });
 
 //quotes page
@@ -28,64 +23,87 @@ router.get("/quotes", ensureAuthenticated, (req, res) => {
 
 //Logout
 router.get("/Logout", (req, res) => {
-  req.logOut();
-  req.session.is_Follow = false
+  req.session.destroy()
   res.redirect("/Login");
 });
 
 // todolist display
 router.get("/TodoList", ensureAuthenticated, (req, res) => {
-  getTodo(req, res)
-    .catch(e => {
-      throw e
-    })
-    .finally(async () => {
-      await prisma.disconnect()
-    })
+  try {
+    getTodo(req, res)
+      .catch(e => {
+        throw e
+      })
+      .finally(async () => {
+        await prisma.$disconnect()
+      })
+  }
+  catch (err) {
+    throw err
+  }
 });
 
 //create a todo
-router.post("/TodoList", ensureAuthenticated, (req, res) => {  
-   createTodo(req, res)
-    .catch((e) => {
-      throw e;
-    })
-    .finally(async () => {
-      await prisma.disconnect();
-    })
+router.post("/TodoList", ensureAuthenticated, (req, res) => {
+  try {
+    createTodo(req, res)
+      .catch((e) => {
+        throw e;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      });
+  } catch (err) {
+    throw err;
+  }
 });
 
 //delete a todo
-router.get("/del/:id", ensureAuthenticated,  (req, res) => {
-   deleteTodo(req, res)
-    .catch((e) => {
-      throw e;
-    })
-    .finally(async () => {
-      await prisma.disconnect();
-    });
+router.get("/del/:id", ensureAuthenticated, (req, res) => {
+  try {
+    deleteTodo(req, res)
+      .catch((e) => {
+        throw e;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      });
+  } catch (err) {
+    throw err;
+  }
 });
 
 //user blog session
 router.get('/Blog', ensureAuthenticated, (req, res) => {
- getBlog(req, res)
+  try {
+    getBlog(req, res)
    .catch((e) => {
      throw e;
    })
    .finally(async () => {
-     await prisma.disconnect();
+     await prisma.$disconnect();
    });
+  }
+  catch (err) {
+    throw err
+  }
+ 
 })
 
 //create a blog post
-router.post("/Blog", ensureAuthenticated, (req, res) => {   
-  createBlog(req, res)
-    .catch((e) => {
-      throw e;
-    })
-    .finally(async () => {
-      await prisma.disconnect();
-    })
+router.post("/Blog", ensureAuthenticated, (req, res) => {
+  try {
+    createBlog(req, res)
+      .catch((e) => {
+        throw e;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      })
+  }
+  catch (err) {
+    console.log(err)
+  }
 });
 
 //userProfile page
@@ -96,40 +114,45 @@ router.get('/userProfile', ensureAuthenticated, async (req, res) => {
       following: true,
     },
     where: {
-      email: req.user.email,
+      email: req.session.user.email,
     },
   });
 
-  const Posts = await prisma.posts.findFirst({
+  let Posts = await prisma.posts.findMany({
       where: {
         email: req.user.email,
       }
+  });
+  console.log(Posts)
+  if (Posts == null | undefined) {
+    Posts = []
+  }
+  else {
+    Posts.forEach((item) => {
+      item.created_at = moment(item.created_at).fromNow();
     });
-
-  Posts.forEach(item => {
-    item.created_at = moment(item.created_at).fromNow();
-  })
+  }
   
   const Profile = await prisma.profile.findFirst({
     where: {
-      email: req.user.email,
+      email: req.session.user.email,
     },
   });
 
   res.render("userProfile", {
     data: Posts,
     Profile: Profile,
-    Author: req.user.name,
-    Avatar: req.user.avatar,
-    Followers: req.user.followedBy.length,
-    Following: req.user.following.length
+    Author: user.name,
+    Avatar: user.avatar,
+    Followers: user.followedBy.length,
+    Following: user.following.length
   });
   
 }); 
 
 //create user profile
 router.post('/EditProfile', ensureAuthenticated, (req, res) => {
-  const { Name, Email, Occupation, Hobbies, Skills, About } = req.body;
+  const { Name, Occupation, Hobbies, Skills, About } = req.body;
   try {
     createProfile(req, res, Name, Email, Occupation, Hobbies, Skills, About)
       .catch((e) => {
@@ -141,6 +164,23 @@ router.post('/EditProfile', ensureAuthenticated, (req, res) => {
   }
   catch (err) {
     console.log(err)
+  }
+});
+
+//update user profile
+router.post('/updateProfile', ensureAuthenticated, (req, res) => {
+  const { Name, Occupation, Hobbies, Skills, About } = req.body;
+  try {
+    UpdateProfile(req, res, Name, Occupation, Hobbies, Skills, About)
+      .catch((e) => {
+        throw e;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      });
+  }
+  catch (err) {
+    throw err
   }
 })
 
@@ -212,24 +252,35 @@ router.get('/Unfollow/:Email', ensureAuthenticated, (req, res) => {
 
 //like a post
 router.get('/Like/:id/', ensureAuthenticated, async (req, res) => {
-  Like(req, res)
+  
+  try {
+    Like(req, res)
     .catch((e) => {
       throw e;
     })
     .finally(async () => {
-      await prisma.disconnect();
+      await prisma.$disconnect();
     });
+   }
+  catch (err) {
+    throw err
+  }
 })
 
 //comment on a post
 router.post("/comment/:id/", ensureAuthenticated, async (req, res) => {
-  Comment(req, res)
-    .catch((e) => {
-      throw e;
-    })
-    .finally(async () => {
-      await prisma.disconnect();
-    });
+  try {
+    Comment(req, res)
+      .catch((e) => {
+        throw e;
+      })
+      .finally(async () => {
+        await prisma.$disconnect();
+      });
+  }
+  catch (err) {
+    throw err
+  }
 });
 
 module.exports = router;

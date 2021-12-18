@@ -50,7 +50,7 @@ model profile {
 
 model todo {
   content String?
-  email   String? @unique
+  email   String? 
   id      String  @id @default(cuid())
   task    String?
   users   users?  @relation(fields: [email], references: [email])

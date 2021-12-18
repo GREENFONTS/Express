@@ -2,12 +2,13 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const cloudinary = require("./config/cloudinary");
 const upload = require("./config/multer");
+const moment = require("moment");
 
 module.exports = {
   getTodo: async (req, res) => {
-    const todos = await prisma.todo.findFirst({
+    const todos = await prisma.todo.findMany({
       where: {
-        email: req.user.email,
+        email: req.session.user.email,
       },
     });
 
@@ -46,7 +47,7 @@ module.exports = {
   getBlog: async (req, res) => {
     let Posts = [];
     let finalPosts = [];
-    const users = await prisma.users.findFirst({
+    const user = await prisma.users.findFirst({
       include: {
         followedBy: {
           include: {
@@ -65,13 +66,13 @@ module.exports = {
       },
     });
 
-    req.user.following.forEach((element) => {
+    user.following.forEach((element) => {
       Posts.push(element.posts);
     });
 
     const Post = await prisma.posts.findMany({
       where: {
-        email: req.user.email,
+        email: user.email,
       },
     });
 
@@ -80,7 +81,7 @@ module.exports = {
     Posts.forEach((element) => {
       element.forEach((item) => {
         item.created_at = moment(item.created_at).fromNow();
-        if (req.user.name == item.author) {
+        if (user.name == item.author) {
           current_user = true;
         }
         finalPosts.push(item);
@@ -88,7 +89,7 @@ module.exports = {
     });
 
     res.render("posts", {
-      Name: req.user.name,
+      Name: user.name,
       data: finalPosts,
     });
   },
@@ -99,11 +100,11 @@ module.exports = {
       data: {
         title: Title,
         content: Content,
-        avatar: req.user.avatar,
-        author: req.user.name,
+        avatar: req.session.user.avatar,
+        author: req.session.user.name,
         users: {
           connect: {
-            email: req.user.email,
+            email: req.session.user.email,
           },
         },
       },
@@ -112,25 +113,7 @@ module.exports = {
   },
 
   createProfile: async (req, res, Name, Email, Occupation, Hobbies, Skills, About) => {
-    let error = [];
-    let profile = await prisma.profile.findFirst({
-      where: {
-        email: Email,
-      },
-    });
-    if (profile) {
-      error.push({ msg: "UserName has been registered" });
-      res.render("EditProfile", {
-        error,
-        Name,
-        Email,
-        Hobbies,
-        Occupation,
-        Skills,
-        About,
-      });
-      error = [];
-    } else {
+    
       await prisma.profile.create({
         data: {
           name: Name,
@@ -141,8 +124,7 @@ module.exports = {
           about: About,
         },
       });
-      res.redirect("/user/Blog");
-    }
+      res.redirect("/user/dashboard");
   },
 
   Author: async (req, res, action, nextAction) => {
@@ -213,89 +195,69 @@ module.exports = {
   },
 
   Like: async (req, res) => {
-    const User = await prisma.likes.findMany({
+    const checkLike = await prisma.likes.findFirst({
       where: {
-        AND: [
-          {
-            postid: req.params.id,
-          },
-          {
-            email: req.user.email,
-          },
-        ],
-      },
-    });
+        email: req.session.user.email,
+        postid: req.params.id
+      }
+    })
 
-    if (User.length != 0) {
-      const curentPost = await prisma.posts.findMany({
+     const currentPost = await prisma.posts.findFirst({
         where: {
           id: req.params.id,
         },
-      });
-      let CurrentLike;
-      curentPost.forEach((element) => {
-        CurrentLike = element.postlike - 1;
-        if (CurrentLike == 0) {
-          CurrentLike = null;
-        }
-      });
-
-      await prisma.posts.updateMany({
-        where: {
-          id: req.params.id,
-        },
-        data: {
-          postlike: CurrentLike,
-        },
-      });
-
-      await prisma.likes.deleteMany({
-        where: {
-          AND: [
-            {
-              postid: req.params.id,
-            },
-            {
-              email: req.user.email,
-            },
-          ],
-        },
-      });
-    } else {
-      await prisma.likes.create({
-        data: {
-          users: {
-            connect: {
-              email: req.user.email,
-            },
-          },
-          post: {
-            connect: {
-              id: req.params.id,
-            },
-          },
-        },
-      });
-
-      const curentPost = await prisma.posts.findFirst({
-        where: {
-          id: req.params.id,
-        },
-      });
-      let CurrentLike;
-      curentPost.forEach((element) => {
-        CurrentLike = element.postlike + 1;
-      });
-
+     });
+    
+    
+    let CurrentLike = currentPost.postlike;
+    if (checkLike == null | undefined) {
+      if (CurrentLike == null) {
+        CurrentLike = 0;
+      }
       await prisma.posts.update({
         where: {
           id: req.params.id,
         },
         data: {
-          postlike: CurrentLike,
+          postlike: CurrentLike + 1,
+        },
+      });
+      
+       await prisma.likes.create({
+         data: {
+           users: {
+             connect: {
+               email: req.session.user.email,
+             },
+           },
+           post: {
+             connect: {
+               id: req.params.id,
+             },
+           },
+         },
+       });
+    }
+    else {
+       await prisma.posts.update({
+         where: {
+           id: req.params.id,
+         },
+         data: {
+           postlike: CurrentLike - 1,
+         },
+       });
+
+      await prisma.likes.deleteMany({
+        where: {          
+           postid: req.params.id,
+           
+              email: req.session.user.email,
+           
         },
       });
     }
+      
     res.redirect("/user/Blog");
   },
 
@@ -377,5 +339,44 @@ module.exports = {
       data: Posts,
     });
     req.session.is_Follow = false;
+  },
+
+  Dashboard: async (req, res) => {
+    let action, text = "";
+    let profile = await prisma.profile.findFirst({
+      where: {
+        email: req.session.user.email,
+      },
+    });
+    if (profile == null | undefined) {
+      text = "createProfile"
+      action = "Create Profile"
+    }
+    else {
+      text = 'updateProfile'
+      action = 'Update Profile '
+    }
+    res.render("welcome", {
+      user: req.session.user,
+      action: action,
+      text: text,
+      profile : profile
+    });
+  },
+
+  UpdateProfile: async (req, res, Name, Occupation, Hobbies, Skills, About) => {
+    await prisma.profile.update({
+      where: {
+        email: req.session.user.email
+      },
+      data: {
+        name: Name,
+        occupation: Occupation,
+        hobbies: Hobbies,
+        skills: Skills,
+        about: About
+      }
+    });
+    res.redirect('/user/dashboard')
   },
 };

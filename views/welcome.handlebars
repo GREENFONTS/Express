@@ -1,21 +1,66 @@
+<div class="container-fluid p-0 ">
+    <nav class="navbar navbar-dark navbar-expand-md fixed bg-dark" data-aos="slide-down" data-aos-duration="250"
+        data-aos-offset="20" data-aos-delay="50" id="mainNav"
+        style="filter: blur(0px) contrast(99%) hue-rotate(0deg) invert(0%) saturate(67%) sepia(0%);background-color: transparent;">
+        <div class="container">
+            <a class="navbar-brand shadow-sm" href="#page-top">
+                <strong>TODO APP</strong></a><button data-toggle="collapse" data-target="#navbarResponsive"
+                class="navbar-toggler navbar-toggler-right" type="button" data-toogle="collapse"
+                aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                <i class="fa fa-bars" data-aos="fade-down" data-aos-duration="250" data-aos-offset="20"
+                    data-aos-delay="50"></i></button>
+            <div class="collapse navbar-collapse d-md-inline-block" id="navbarResponsive" style="width: 700px;">
+
+                <ul class="nav navbar-nav d-md-inline-flex ml-auto text-uppercase"
+                    style="margin: 0px 0px 0px 0px;margin-left: 0px;width: 700px;padding-left: 10px;margin-right: -250px;">
+                    <li class="nav-item" role="presentation"></li>
+
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-light" href="/user/dashboard"
+                            style="padding: 7.5px 15px;font-size: 15px;width: 100px;">Home</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-light" href="/user/Blog"
+                            style="padding: 7.5px 15px;font-size: 15px;width: 100px;">Blog</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-light" href="/user/TodoList"
+                            style="padding: 7.5px 15px;font-size: 15px;width: 100px;">TodoList</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-light" href="/user/Quotes"
+                            style="padding: 7.5px 15px;font-size: 15px;width: 100px;">Quotes</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-light" href="/user/Logout"
+                            style="padding: 7.5px 15px;font-size: 15px;width: 100px;">Logout</a>
+                    </li>
+
+                </ul>
+            </div>
+        </div>
+    </nav>
+</div>
+
+
 <div class="container-fluid p-0">
    <header class="pulse animated masthead container-fluid pt-5" style="background-image: url('/header-bg.jpg'); height:100vh; background-size:contain">
     <div class="container pt-5 mt-5">
-        <h1 class="text-light pt-5"><i>Hello</i> {{Name}}</h1>
+        <h1 class="text-light pt-5"><i>Hello</i> {{user.name}}</h1>
         <div class="intro-text mb-5 text-light" style="padding-top: 50px;"><span class="bounce animated text-light"
                 style="font-size: 25PX;letter-spacing: 2px; margin-bottom: 50px;">Welcome To
                 <strong class="mb-5 text-light">GREENFONTS' MEDIA RESOURCES</strong></span>
             <div class="intro-lead-in"></div>
             <div class="intro-heading text-uppercase mb-5 text-light mt-4"><span >It's Nice To Meet
-                    You</span></div><button class="btn btn-primary btn-xl text-uppercase js-scroll-trigger text-light" role="button" data-toggle="modal" data-target="#editProfileModal"
-                data-bs-hover-animate="shake">Edit Profile</button>
+                    You</span></div><button class="btn btn-primary btn-xl text-uppercase js-scroll-trigger text-light" role="button" data-toggle="modal" data-target='#{{text}}'
+                data-bs-hover-animate="shake">{{action}}</button>
                 <a class="btn btn-primary btn-xl text-uppercase js-scroll-trigger text-light" role="button"
                     data-bs-hover-animate="shake" href="/user/userProfile">My Profile</a>
         </div>
     </div>
 </header>
 
-<div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog">
+<div class="modal fade" id="createProfile" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -58,6 +103,54 @@
                         <label for="AboutMe">Description</label>
                         <textarea name="About" class="form-control"
                             placeholder="Descirbe yourself in not less than 200 words" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Submit
+                    </button>
+                </form>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="updateProfile" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Edit your Profile</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <form action="/user/updateProfile" method="POST" enctype="application/x-www-form-urlencoded">
+                    <div class="form-group">
+                        <label for="name">UserName</label>
+                        <input type="name" id="name" name="Name" class="form-control" value="{{profile.name}}"
+                            placeholder="Enter your UserName" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Occupation</label>
+                        <input type='text' id="Ocupation" name="Occupation" class="form-control" value="{{profile.occupation}}"
+                            placeholder="Occupation" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="Skills">Skills</label>
+                        <input type="text" name="Skills" class="form-control" value="{{profile.skills}}" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="Hobbies">Hobbies</label>
+                        <input type="text" id="Hobbies" name="Hobbies" class="form-control" value="{{profile.hobbies}}"
+                            placeholder="What you like doing (Hobbies)" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="AboutMe">Description</label>
+                        <textarea name="About" class="form-control"
+                            placeholder='{{profile.about}}' required></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">
                         Submit
